@@ -96,12 +96,12 @@ export class Wallet extends Account {
 		}
 	}
 
-	getBalance() {
+	getAmount() {
 		return Number(this.balance) / constants.WALLET_UNIT_TO_SATOSHI;
 	}
 
 	getBalanceEquivalent(currency: MarketCurrency) {
-		const balance = this.getBalance() || 0;
+		const balance = this.getAmount() || 0;
 		const price = currency ? currency.price : 0;
 
 		return balance * price;

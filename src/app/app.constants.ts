@@ -6,7 +6,7 @@ export const ARKTOSHI_DP = 8;
 export const WALLET_UNIT_TO_SATOSHI = 100000000;
 export const WALLET_REFRESH_PRICE_MILLISECONDS = 500 * 1000;
 export const WALLET_REFRESH_TRANSACTIONS_MILLISECONDS = 10 * 1000;
-export const WALLET_MIN_NUMBER_CONFIRMATIONS = 51;
+export const WALLET_MIN_NUMBER_CONFIRMATIONS = 53;
 export const BIP39_DOCUMENTATION_URL =
 	"https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki";
 
@@ -45,60 +45,35 @@ export const PIN_ATTEMPTS_LIMIT = 3;
 export const PIN_ATTEMPTS_TIMEOUT_MILLISECONDS = 30 * 1000;
 
 // ARK
-export const PRIVACY_POLICY_URL = "https://ark.io/PrivacyPolicy.txt";
-export const URI_QRCODE_SCHEME_PREFIX = "ark:";
-export const NUM_ACTIVE_DELEGATES = 51;
+export const PRIVACY_POLICY_URL = "https://solar.org/privacy-policy";
+export const URI_QRCODE_SCHEME_PREFIX = "sxp:";
+export const NUM_ACTIVE_DELEGATES = 53;
 export const TOP_WALLETS_TO_FETCH = 50;
 
 export const TRANSACTION_GROUPS = {
-	STANDARD: 1,
-	MAGISTRATE: 2,
+    STANDARD: 1,
+    SOLAR: 2
 };
 
 export const TRANSACTION_TYPES = {
 	MULTI_SIGN: -1,
 
 	GROUP_1: {
-		TRANSFER: 0,
-		SECOND_SIGNATURE: 1,
-		DELEGATE_REGISTRATION: 2,
-		VOTE: 3,
-		MULTI_SIGNATURE: 4,
-		IPFS: 5,
-		MULTI_PAYMENT: 6,
-		DELEGATE_RESIGNATION: 7,
-		HTLC_LOCK: 8,
-		HTLC_CLAIM: 9,
-		HTLC_REFUND: 10,
+        TRANSFER: 0,
+        SECOND_SIGNATURE: 1,
+        DELEGATE_REGISTRATION: 2,
+        VOTE: 3,
+        MULTI_SIGNATURE: 4,
+        IPFS: 5,
+        MULTI_PAYMENT: 6,
+        DELEGATE_RESIGNATION: 7,
+        HTLC_LOCK: 8,
+        HTLC_CLAIM: 9,
+        HTLC_REFUND: 10
 	},
 
 	GROUP_2: {
-		BUSINESS_REGISTRATION: 0,
-		BUSINESS_RESIGNATION: 1,
-		BUSINESS_UPDATE: 2,
-		BRIDGECHAIN_REGISTRATION: 3,
-		BRIDGECHAIN_RESIGNATION: 4,
-		BRIDGECHAIN_UPDATE: 5,
-		ENTITY: 6,
-	},
-};
-
-export const TRANSACTION_TYPES_ENTITY = {
-	TYPE: {
-		BUSINESS: 0,
-		PRODUCT: 1,
-		PLUGIN: 2,
-		MODULE: 3,
-		DELEGATE: 4,
-	},
-
-	SUBTYPE: {
-		NONE: 0,
-	},
-
-	ACTION: {
-		REGISTER: 0,
-		UPDATE: 1,
-		RESIGN: 2,
+        BURN: 0,
+        VOTE: 2
 	},
 };

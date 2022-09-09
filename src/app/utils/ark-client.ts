@@ -1,3 +1,4 @@
+import { HttpClient } from "@angular/common/http";
 import {
 	AccountResponse,
 	AccountVotesResponse,
@@ -7,16 +8,16 @@ import {
 	LoaderStatusSync,
 	Peer,
 	PeerResponse,
+	PeerVersion2ConfigResponse,
 	TransactionPostResponse,
 	TransactionResponse,
 } from "ark-ts";
+import lodash from "lodash";
 import { Observable, of } from "rxjs";
-import { tap, timeout } from "rxjs/operators";
+import { timeout } from "rxjs/operators";
 
 import { TRANSACTION_GROUPS } from "@/app/app.constants";
 import { INodeConfiguration } from "@/models/node";
-import { LoggerService } from "@/services/logger/logger.service";
-import { HttpClient } from "@/utils/ark-http-client";
 
 export interface PeerApiResponse extends Peer {
 	latency?: number;
@@ -36,11 +37,7 @@ export default class ApiClient {
 	private host: string;
 	private httpClient: HttpClient;
 
-	constructor(
-		host: string,
-		httpClient: HttpClient,
-		private loggerService: LoggerService,
-	) {
+	constructor(host: string, httpClient: HttpClient) {
 		this.host = host;
 		this.httpClient = httpClient;
 	}
@@ -70,8 +67,7 @@ export default class ApiClient {
 					const data = response.data;
 
 					if (data.length) {
-						const lastVote =
-							data[0].asset.votes[data[0].asset.votes.length - 1];
+						const lastVote = data[0].asset.votes[0];
 
 						if (lastVote.charAt(0) === "-") {
 							observer.next({
@@ -81,7 +77,9 @@ export default class ApiClient {
 							observer.complete();
 						}
 
-						const delegatePublicKey = lastVote.substring(1);
+						const delegatePublicKey = data[0].asset.votes[0].substring(
+							1,
+						);
 						this.getDelegateByPublicKey(
 							delegatePublicKey,
 						).subscribe(
@@ -230,6 +228,66 @@ export default class ApiClient {
 		});
 	}
 
+	getPeerConfig(
+		ip: string,
+		port: number,
+		protocol: "http" | "https" = "http",
+	): Observable<PeerVersion2ConfigResponse> {
+		return new Observable((observer) => {
+			this.httpClient
+				.get(`${protocol}://${ip}:6003/api/node/configuration`)
+				.pipe(timeout(2000))
+				.subscribe(
+					(response: any) => {
+						observer.next(response);
+						observer.complete();
+					},
+					() => {
+						this.httpClient
+							.get(`${protocol}://${ip}:${port}/config`)
+							.pipe(timeout(2000))
+							.subscribe(
+								(response: any) => {
+									observer.next(response);
+									observer.complete();
+								},
+								() => {
+									this.getNodeConfiguration(
+										`${protocol}://${ip}:${port}`,
+									).subscribe(
+										(response) => {
+											const apiPort = lodash.find(
+												response.ports,
+												(_, key) =>
+													key
+														.split("/")
+														.reverse()[0] ===
+													"core-wallet-api",
+											);
+											const isApiEnabled =
+												apiPort && Number(apiPort) > 1;
+											if (isApiEnabled) {
+												this.getPeerConfig(
+													ip,
+													apiPort,
+													protocol,
+												).subscribe(
+													(r) => observer.next(r),
+													(e) => observer.error(e),
+												);
+											} else {
+												observer.error();
+											}
+										},
+										(error) => observer.error(error),
+									);
+								},
+							);
+					},
+				);
+		});
+	}
+
 	postTransaction(
 		transaction: any,
 		peer: Peer,
@@ -283,24 +341,7 @@ export default class ApiClient {
 					observer.next(this.__formatDelegateResponse(data));
 					observer.complete();
 				},
-				(error) => {
-					const response =
-						typeof error.error === "string"
-							? JSON.parse(error.error)
-							: error.error;
-					if (
-						response &&
-						error.status === 404 &&
-						response.message === "Delegate not found"
-					) {
-						observer.next(null);
-						observer.complete();
-
-						return;
-					}
-
-					observer.error(error);
-				},
+				(error) => observer.error(error),
 			);
 		});
 	}
@@ -313,16 +354,19 @@ export default class ApiClient {
 			rate: response.rank,
 		} as Delegate;
 
+		if (response.votesReceived) {
+			delegate.percent = response.votesReceived.percent || 0;
+		}
+
 		if (response.blocks) {
 			delegate.producedBlocks = response.blocks.produced || 0;
 			delegate.missedBlocks = response.blocks.missed || 0;
 		}
 
 		if (response.production) {
-			delegate.approval = response.production.approval || 0;
 			delegate.productivity = response.production.productivity || 0;
 		}
-
+		
 		return delegate;
 	}
 
@@ -336,16 +380,12 @@ export default class ApiClient {
 		host: string = this.host,
 		timeoutMs: number = 5000,
 	) {
-		const url = `${host}/api/${path}`;
 		return this.httpClient
-			.get(url, {
+			.request("GET", `${host}/api/${path}`, {
 				...options,
 				headers: this.defaultHeaders,
 			})
-			.pipe(
-				timeout(timeoutMs),
-				tap(() => this.loggerService.info(`GET - ${url}`)),
-			);
+			.pipe(timeout(timeoutMs));
 	}
 
 	private post(

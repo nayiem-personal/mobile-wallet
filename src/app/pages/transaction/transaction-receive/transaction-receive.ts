@@ -39,7 +39,7 @@ export class TransactionReceivePage implements OnInit {
 	}
 
 	ngOnInit() {
-		this.formGroup.controls.amount.valueChanges.subscribe(
+		this.formGroup.controls.balance.valueChanges.subscribe(
 			(value: BigNumber) => (this.amount = value.toNumber()),
 		);
 	}

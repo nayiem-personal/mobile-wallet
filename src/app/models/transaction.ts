@@ -1,16 +1,52 @@
 import { Interfaces } from "@arkecosystem/crypto";
-import { Transaction as TransactionModel } from "ark-ts/model";
+import { Transaction as TransactionModel, TransactionType } from "ark-ts/model";
 import moment from "moment";
 
-import {
-	TRANSACTION_GROUPS,
-	TRANSACTION_TYPES,
-	TRANSACTION_TYPES_ENTITY,
-} from "@/app/app.constants";
+import { TRANSACTION_GROUPS, TRANSACTION_TYPES } from "@/app/app.constants";
 import { MarketCurrency, MarketHistory, MarketTicker } from "@/models/market";
 import { SafeBigNumber as BigNumber } from "@/utils/bignumber";
 
 import { ArkUtility } from "../utils/ark-utility";
+
+const TX_TYPES = {
+	1: {
+		0: "TRANSACTIONS_PAGE.SENT",
+		1: "TRANSACTIONS_PAGE.SECOND_SIGNATURE_CREATION",
+		2: "TRANSACTIONS_PAGE.DELEGATE_REGISTRATION",
+		3: "DELEGATES_PAGE.VOTE",
+		4: "TRANSACTIONS_PAGE.MULTISIGNATURE_REGISTRATION",
+		5: "TRANSACTIONS_PAGE.IPFS",
+		6: "TRANSACTIONS_PAGE.TRANSFER",
+		7: "TRANSACTIONS_PAGE.DELEGATE_RESIGNATION",
+		8: "TRANSACTIONS_PAGE.HTLC_LOCK",
+		9: "TRANSACTIONS_PAGE.HTLC_CLAIM",
+		10: "TRANSACTIONS_PAGE.HTLC_REFUND",
+	},
+	2: {
+		0: "TRANSACTIONS_PAGE.VOTE",
+		1: "TRANSACTIONS_PAGE.BURN",
+	},
+};
+
+const TX_TYPES_ACTIVITY = {
+	1: {
+		0: "TRANSACTIONS_PAGE.SENT_TO",
+		1: "TRANSACTIONS_PAGE.SECOND_SIGNATURE_CREATION",
+		2: "TRANSACTIONS_PAGE.DELEGATE_REGISTRATION",
+		3: "DELEGATES_PAGE.VOTE",
+		4: "TRANSACTIONS_PAGE.MULTISIGNATURE_REGISTRATION",
+		5: "TRANSACTIONS_PAGE.IPFS",
+		6: "TRANSACTIONS_PAGE.TRANSFER",
+		7: "TRANSACTIONS_PAGE.DELEGATE_RESIGNATION",
+		8: "TRANSACTIONS_PAGE.HTLC_LOCK",
+		9: "TRANSACTIONS_PAGE.HTLC_CLAIM",
+		10: "TRANSACTIONS_PAGE.HTLC_REFUND",
+	},
+	2: {
+		0: "TRANSACTIONS_PAGE.BURN",
+		1: "TRANSACTIONS_PAGE.VOTE",
+	},
+};
 
 export type TransactionEntity = TransactionModel & {
 	isSender: boolean;
@@ -53,8 +89,7 @@ export class Transaction extends TransactionModel {
 				self[prop] = input[prop];
 			}
 		}
-		this.senderId = input.sender;
-		this.recipientId = input.recipient || input.recipientId;
+
 		this.date = new Date(this.timestamp * 1000);
 		this.amount = new BigNumber(input.amount).toNumber();
 		this.fee = new BigNumber(input.fee).toNumber();
@@ -68,21 +103,6 @@ export class Transaction extends TransactionModel {
 
 		if (this.isSender() || forceFee) {
 			amount = amount.plus(this.fee);
-		}
-
-		if (this.isMultipayment()) {
-			for (const payment of this.asset.payments) {
-				if (this.isSender() && this.address === payment.recipientId) {
-					continue;
-				} else if (
-					!this.isSender() &&
-					this.address !== payment.recipientId
-				) {
-					continue;
-				}
-				// @ts-ignore
-				amount = amount.plus(payment.amount);
-			}
 		}
 
 		return amount.toNumber();
@@ -130,422 +150,55 @@ export class Transaction extends TransactionModel {
 	}
 
 	getTypeLabel(): string {
-		if (this.isTransfer()) {
-			if (this.isSender()) {
-				return "TRANSACTIONS_PAGE.SENT";
-			}
-			return "TRANSACTIONS_PAGE.RECEIVED";
+		let type = TX_TYPES[this.typeGroup][this.type];
+
+		if (this.isTransfer() && !this.isSender()) {
+			type = "TRANSACTIONS_PAGE.RECEIVED";
 		}
-		if (this.isSecondSignature()) {
-			return "TRANSACTIONS_PAGE.SECOND_SIGNATURE_CREATION";
-		}
-		if (this.isDelegateRegistration()) {
-			return "TRANSACTIONS_PAGE.DELEGATE_REGISTRATION";
-		}
-		if (this.isVote()) {
-			return "DELEGATES_PAGE.VOTE";
-		}
-		if (this.isUnvote()) {
-			return "DELEGATES_PAGE.UNVOTE";
-		}
-		if (this.isMultiSignature()) {
-			return "TRANSACTIONS_PAGE.MULTISIGNATURE_REGISTRATION";
-		}
-		if (this.isIpfs()) {
-			return "TRANSACTIONS_PAGE.IPFS";
-		}
-		if (this.isMultipayment()) {
-			return "TRANSACTIONS_PAGE.MULTI_PAYMENT";
-		}
-		if (this.isDelegateResignation()) {
-			return "TRANSACTIONS_PAGE.DELEGATE_RESIGNATION";
-		}
-		if (this.isTimelock()) {
-			return "TRANSACTIONS_PAGE.HTLC_LOCK";
-		}
-		if (this.isTimelockClaim()) {
-			return "TRANSACTIONS_PAGE.HTLC_CLAIM";
-		}
-		if (this.isTimelockRefund()) {
-			return "TRANSACTIONS_PAGE.HTLC_REFUND";
+		if (this.type === TransactionType.Vote && this.isUnvote()) {
+			type = "DELEGATES_PAGE.UNVOTE";
 		}
 
-		// Magistrate
-		if (this.isLegacyBusinessRegistration()) {
-			return "TRANSACTIONS_PAGE.LEGACY_BUSINESS_REGISTRATION";
-		}
-		if (this.isLegacyBusinessResignation()) {
-			return "TRANSACTIONS_PAGE.LEGACY_BUSINESS_RESIGNATION";
-		}
-		if (this.isLegacyBusinessUpdate()) {
-			return "TRANSACTIONS_PAGE.LEGACY_BUSINESS_UPDATE";
-		}
-		if (this.isLegacyBridgechainRegistration()) {
-			return "TRANSACTIONS_PAGE.LEGACY_BRIDGECHAIN_REGISTRATION";
-		}
-		if (this.isLegacyBridgechainResignation()) {
-			return "TRANSACTIONS_PAGE.LEGACY_BRIDGECHAIN_RESIGNATION";
-		}
-		if (this.isLegacyBridgechainUpdate()) {
-			return "TRANSACTIONS_PAGE.LEGACY_BRIDGECHAIN_UPDATE";
-		}
-
-		// Magistrate 2.0
-		if (this.isBusinessEntityRegistration()) {
-			return "TRANSACTIONS_PAGE.BUSINESS_ENTITY_REGISTRATION";
-		}
-		if (this.isBusinessEntityResignation()) {
-			return "TRANSACTIONS_PAGE.BUSINESS_ENTITY_REGISTRATION";
-		}
-		if (this.isBusinessEntityUpdate()) {
-			return "TRANSACTIONS_PAGE.BUSINESS_ENTITY_UPDATE";
-		}
-		if (this.isProductEntityRegistration()) {
-			return "TRANSACTIONS_PAGE.PRODUCT_ENTITY_REGISTRATION";
-		}
-		if (this.isProductEntityResignation()) {
-			return "TRANSACTIONS_PAGE.PRODUCT_ENTITY_REGISTRATION";
-		}
-		if (this.isProductEntityUpdate()) {
-			return "TRANSACTIONS_PAGE.PRODUCT_ENTITY_UPDATE";
-		}
-		if (this.isPluginEntityRegistration()) {
-			return "TRANSACTIONS_PAGE.PLUGIN_ENTITY_REGISTRATION";
-		}
-		if (this.isPluginEntityResignation()) {
-			return "TRANSACTIONS_PAGE.PLUGIN_ENTITY_REGISTRATION";
-		}
-		if (this.isPluginEntityUpdate()) {
-			return "TRANSACTIONS_PAGE.PLUGIN_ENTITY_UPDATE";
-		}
-		if (this.isModuleEntityRegistration()) {
-			return "TRANSACTIONS_PAGE.MODULE_ENTITY_REGISTRATION";
-		}
-		if (this.isModuleEntityResignation()) {
-			return "TRANSACTIONS_PAGE.MODULE_ENTITY_REGISTRATION";
-		}
-		if (this.isModuleEntityUpdate()) {
-			return "TRANSACTIONS_PAGE.MODULE_ENTITY_UPDATE";
-		}
-		if (this.isDelegateEntityRegistration()) {
-			return "TRANSACTIONS_PAGE.DELEGATE_ENTITY_REGISTRATION";
-		}
-		if (this.isDelegateEntityResignation()) {
-			return "TRANSACTIONS_PAGE.DELEGATE_ENTITY_REGISTRATION";
-		}
-		if (this.isDelegateEntityUpdate()) {
-			return "TRANSACTIONS_PAGE.DELEGATE_ENTITY_UPDATE";
-		}
-
-		if (this.isUndefinedRegistration()) {
-			return "TRANSACTIONS_PAGE.UNDEFINED_REGISTRATION";
-		}
-		if (this.isUndefinedResignation()) {
-			return "TRANSACTIONS_PAGE.UNDEFINED_RESIGNATION";
-		}
-		if (this.isUndefinedUpdate()) {
-			return "TRANSACTIONS_PAGE.UNDEFINED_UPDATE";
-		}
-
-		return "TRANSACTIONS_PAGE.UNDEFINED";
+		return type;
 	}
 
 	getActivityLabel() {
-		return this.getTypeLabel();
+		let type = TX_TYPES_ACTIVITY[this.typeGroup][this.type];
+
+		if (this.isTransfer() && !this.isSender()) {
+			type = "TRANSACTIONS_PAGE.RECEIVED_FROM";
+		}
+		if (this.type === TransactionType.Vote && this.isUnvote()) {
+			type = "DELEGATES_PAGE.UNVOTE";
+		}
+
+		return type;
 	}
 
-	isTransfer() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_1.TRANSFER &&
-			this.typeGroup === TRANSACTION_GROUPS.STANDARD
-		);
-	}
-
-	isSecondSignature() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_1.SECOND_SIGNATURE &&
-			this.typeGroup === TRANSACTION_GROUPS.STANDARD
-		);
-	}
-
-	isDelegateRegistration() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_1.DELEGATE_REGISTRATION &&
-			this.typeGroup === TRANSACTION_GROUPS.STANDARD
-		);
-	}
-
-	isVote() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_1.VOTE &&
-			this.typeGroup === TRANSACTION_GROUPS.STANDARD
-		);
-	}
-
-	isMultiSignature() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_1.MULTI_SIGNATURE &&
-			this.typeGroup === TRANSACTION_GROUPS.STANDARD
-		);
-	}
-
-	isIpfs() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_1.IPFS &&
-			this.typeGroup === TRANSACTION_GROUPS.STANDARD
-		);
-	}
-
-	isMultipayment() {
+	isMultipayment(): boolean {
 		return (
 			this.type === TRANSACTION_TYPES.GROUP_1.MULTI_PAYMENT &&
 			this.typeGroup === TRANSACTION_GROUPS.STANDARD
 		);
 	}
 
-	isDelegateResignation() {
+	isTransfer(): boolean {
 		return (
-			this.type === TRANSACTION_TYPES.GROUP_1.DELEGATE_RESIGNATION &&
+			this.type === TransactionType.SendArk &&
 			this.typeGroup === TRANSACTION_GROUPS.STANDARD
 		);
 	}
 
-	isTimelock() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_1.HTLC_LOCK &&
-			this.typeGroup === TRANSACTION_GROUPS.STANDARD
-		);
-	}
-
-	isTimelockClaim() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_1.HTLC_CLAIM &&
-			this.typeGroup === TRANSACTION_GROUPS.STANDARD
-		);
-	}
-
-	isTimelockRefund() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_1.HTLC_REFUND &&
-			this.typeGroup === TRANSACTION_GROUPS.STANDARD
-		);
-	}
-
-	// Magistrate 2.0
-
-	isEntityRegistration() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_2.ENTITY &&
-			this.typeGroup === TRANSACTION_GROUPS.MAGISTRATE &&
-			this.asset &&
-			this.asset.action === TRANSACTION_TYPES_ENTITY.ACTION.REGISTER
-		);
-	}
-
-	isEntityResignation() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_2.ENTITY &&
-			this.typeGroup === TRANSACTION_GROUPS.MAGISTRATE &&
-			this.asset &&
-			this.asset.action === TRANSACTION_TYPES_ENTITY.ACTION.RESIGN
-		);
-	}
-
-	isEntityUpdate() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_2.ENTITY &&
-			this.typeGroup === TRANSACTION_GROUPS.MAGISTRATE &&
-			this.asset &&
-			this.asset.action === TRANSACTION_TYPES_ENTITY.ACTION.UPDATE
-		);
-	}
-
-	isBusinessEntityRegistration() {
-		return (
-			this.isEntityRegistration() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.BUSINESS
-		);
-	}
-
-	isBusinessEntityResignation() {
-		return (
-			this.isEntityResignation() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.BUSINESS
-		);
-	}
-
-	isBusinessEntityUpdate() {
-		return (
-			this.isEntityUpdate() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.BUSINESS
-		);
-	}
-
-	isProductEntityRegistration() {
-		return (
-			this.isEntityRegistration() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.PRODUCT
-		);
-	}
-
-	isProductEntityResignation() {
-		return (
-			this.isEntityResignation() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.PRODUCT
-		);
-	}
-
-	isProductEntityUpdate() {
-		return (
-			this.isEntityUpdate() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.PRODUCT
-		);
-	}
-
-	isPluginEntityRegistration() {
-		return (
-			this.isEntityRegistration() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.PLUGIN
-		);
-	}
-
-	isPluginEntityResignation() {
-		return (
-			this.isEntityResignation() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.PLUGIN
-		);
-	}
-
-	isPluginEntityUpdate() {
-		return (
-			this.isEntityUpdate() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.PLUGIN
-		);
-	}
-
-	isModuleEntityRegistration() {
-		return (
-			this.isEntityRegistration() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.MODULE
-		);
-	}
-
-	isModuleEntityResignation() {
-		return (
-			this.isEntityResignation() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.MODULE
-		);
-	}
-
-	isModuleEntityUpdate() {
-		return (
-			this.isEntityUpdate() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.MODULE
-		);
-	}
-
-	isDelegateEntityRegistration() {
-		return (
-			this.isEntityRegistration() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.DELEGATE
-		);
-	}
-
-	isDelegateEntityResignation() {
-		return (
-			this.isEntityResignation() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.DELEGATE
-		);
-	}
-
-	isDelegateEntityUpdate() {
-		return (
-			this.isEntityUpdate() &&
-			this.asset.type === TRANSACTION_TYPES_ENTITY.TYPE.DELEGATE
-		);
-	}
-
-	// Magistrate 1.0
-
-	isLegacyBusinessRegistration() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_2.BUSINESS_REGISTRATION &&
-			this.typeGroup === TRANSACTION_GROUPS.MAGISTRATE
-		);
-	}
-
-	isLegacyBusinessResignation() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_2.BUSINESS_RESIGNATION &&
-			this.typeGroup === TRANSACTION_GROUPS.MAGISTRATE
-		);
-	}
-
-	isLegacyBusinessUpdate() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_2.BUSINESS_UPDATE &&
-			this.typeGroup === TRANSACTION_GROUPS.MAGISTRATE
-		);
-	}
-
-	isLegacyBridgechainRegistration() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_2.BRIDGECHAIN_REGISTRATION &&
-			this.typeGroup === TRANSACTION_GROUPS.MAGISTRATE
-		);
-	}
-
-	isLegacyBridgechainResignation() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_2.BRIDGECHAIN_RESIGNATION &&
-			this.typeGroup === TRANSACTION_GROUPS.MAGISTRATE
-		);
-	}
-
-	isLegacyBridgechainUpdate() {
-		return (
-			this.type === TRANSACTION_TYPES.GROUP_2.BRIDGECHAIN_UPDATE &&
-			this.typeGroup === TRANSACTION_GROUPS.MAGISTRATE
-		);
-	}
-
-	isUndefinedRegistration() {
-		return (
-			this.isEntityRegistration() &&
-			!Object.values(TRANSACTION_TYPES_ENTITY.TYPE).includes(
-				this.asset.type,
-			)
-		);
-	}
-
-	isUndefinedResignation() {
-		return (
-			this.isEntityResignation() &&
-			!Object.values(TRANSACTION_TYPES_ENTITY.TYPE).includes(
-				this.asset.type,
-			)
-		);
-	}
-
-	isUndefinedUpdate() {
-		return (
-			this.isEntityUpdate() &&
-			!Object.values(TRANSACTION_TYPES_ENTITY.TYPE).includes(
-				this.asset.type,
-			)
-		);
-	}
-
-	isSender() {
+	isSender(): boolean {
 		return this.senderId === this.address;
 	}
 
-	isReceiver() {
+	isReceiver(): boolean {
 		return this.recipientId === this.address;
 	}
 
-	isUnvote() {
-		if (this.isVote() && this.asset && this.asset.votes) {
+	isUnvote(): boolean {
+		if (this.asset && this.asset.votes) {
 			const vote = this.asset.votes[0];
 			return vote.startsWith("-");
 		}

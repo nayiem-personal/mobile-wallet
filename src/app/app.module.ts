@@ -3,7 +3,6 @@ import { ErrorHandler, NgModule } from "@angular/core";
 import { BrowserModule, HammerModule } from "@angular/platform-browser";
 import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
 import { RouteReuseStrategy } from "@angular/router";
-import { HTTP } from "@ionic-native/http/ngx";
 import { Keyboard } from "@ionic-native/keyboard/ngx";
 import { Network } from "@ionic-native/network/ngx";
 import { QRScanner } from "@ionic-native/qr-scanner/ngx";
@@ -55,7 +54,6 @@ export function createTranslateLoader(http: HttpClient) {
 		Network,
 		ScreenOrientation,
 		GlobalErrorHandlerService,
-		HTTP,
 		{ provide: UserDataService, useClass: UserDataServiceImpl },
 		{ provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
 		{ provide: ErrorHandler, useClass: GlobalErrorHandlerService },

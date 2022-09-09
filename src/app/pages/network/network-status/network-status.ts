@@ -33,6 +33,10 @@ export class NetworkStatusPage implements OnInit, OnDestroy {
 		this.currentPeer = this.currentNetwork.activePeer;
 	}
 
+	getPeerUrl() {
+		return `http://${this.currentPeer.ip}:${this.currentPeer.port}`;
+	}
+
 	changePeer() {
 		this.translateService
 			.get("NETWORKS_PAGE.LOOKING_GOOD_PEER")
@@ -79,18 +83,18 @@ export class NetworkStatusPage implements OnInit, OnDestroy {
 
 	private refreshData() {
 		this.arkApiProvider.client
-			.getNodeConfiguration(this.currentNetwork.getPeerAPIUrl())
+			.getPeerConfig(this.currentPeer.ip, this.currentNetwork.p2pPort)
 			.pipe(takeUntil(this.unsubscriber$))
 			.subscribe((response) => {
 				if (response) {
 					this.zone.run(() => {
-						this.currentPeer.version = response.core.version;
+						this.currentPeer.version = response.data.version;
 					});
 				}
 			});
 
 		this.arkApiProvider.client
-			.getPeerSyncing(this.currentNetwork.getPeerAPIUrl())
+			.getPeerSyncing(this.getPeerUrl())
 			.pipe(takeUntil(this.unsubscriber$))
 			.subscribe((response) => {
 				if (response) {

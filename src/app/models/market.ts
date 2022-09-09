@@ -221,11 +221,7 @@ export class MarketHistory {
 	getPriceByDate(currencyCode: string, date: Date): number {
 		const timestampDate = date.setHours(0, 0, 0, 0);
 
-		if (this.history[currencyCode.toUpperCase()]) {
-			return this.history[currencyCode.toUpperCase()][timestampDate];
-		}
-
-		return 0;
+		return this.history[currencyCode.toUpperCase()][timestampDate];
 	}
 
 	getLastWeekPrice(currencyCode: string): any {

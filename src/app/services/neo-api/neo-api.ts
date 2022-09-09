@@ -1,9 +1,9 @@
+import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable, of } from "rxjs";
 import { map } from "rxjs/operators";
 
 import { NetworkProvider } from "@/services/network/network";
-import { HttpClient } from "@/utils/ark-http-client";
 
 @Injectable({ providedIn: "root" })
 export class NeoApiProvider {
@@ -19,12 +19,12 @@ export class NeoApiProvider {
 			return of(false);
 		}
 
-		// we use the getBalance call, because it's fast, if the address exists (i.e. has any transactions), the address is returned
+		// we use the getAmount call, because it's fast, if the address exists (i.e. has any transactions), the address is returned
 		// we check if it's a real address (and not "not found") and return the result
-		return this.getBalance(address).pipe(map((res) => res.length > 0));
+		return this.getAmount(address).pipe(map((res) => res.length > 0));
 	}
 
-	private getBalance(address: string): Observable<any[]> {
+	private getAmount(address: string): Observable<any[]> {
 		return this.http.get<any[]>(
 			`${NeoApiProvider.baseUrl}/get_last_transactions_by_address/${address}`,
 		);

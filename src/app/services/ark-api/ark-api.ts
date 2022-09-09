@@ -1,5 +1,6 @@
+import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
-import * as ArkCrypto from "@arkecosystem/crypto";
+import * as SolarCrypto from "@solar-network/crypto"
 import * as arkts from "ark-ts";
 import arktsConfig from "ark-ts/config";
 import lodash from "lodash";
@@ -24,13 +25,11 @@ import { FeeStatistic, StoredNetwork } from "@/models/stored-network";
 import { StorageProvider } from "@/services/storage/storage";
 import { ToastProvider } from "@/services/toast/toast";
 import { UserDataService } from "@/services/user-data/user-data.interface";
-import ArkClient, { WalletResponse } from "@/utils/ark-client";
-import { HttpClient } from "@/utils/ark-http-client";
 import { PeerDiscovery } from "@/utils/ark-peer-discovery";
-import { ArkUtility } from "@/utils/ark-utility";
 import { SafeBigNumber as BigNumber } from "@/utils/bignumber";
 
-import { LoggerService } from "../logger/logger.service";
+import ArkClient, { WalletResponse } from "../../utils/ark-client";
+import { ArkUtility } from "../../utils/ark-utility";
 
 interface NodeFees {
 	type: number;
@@ -72,7 +71,6 @@ export class ArkApiProvider {
 		private userDataService: UserDataService,
 		private storageProvider: StorageProvider,
 		private toastProvider: ToastProvider,
-		private loggerService: LoggerService,
 	) {
 		this.loadData();
 
@@ -144,7 +142,6 @@ export class ArkApiProvider {
 		this._client = new ArkClient(
 			this.network.getPeerAPIUrl(),
 			this.httpClient,
-			this.loggerService,
 		);
 		this._peerDiscovery = new PeerDiscovery(this.httpClient);
 
@@ -153,7 +150,7 @@ export class ArkApiProvider {
 		// Fallback if the fetchNodeConfiguration fail
 		this._network.activeDelegates = constants.NUM_ACTIVE_DELEGATES;
 
-		this.connectToPeer()
+		this.connectToRandomPeer()
 			.pipe(
 				catchError((e) => {
 					console.error(e);
@@ -165,37 +162,6 @@ export class ArkApiProvider {
 		this.userDataService.onUpdateNetwork$.next(this._network);
 
 		this.fetchFees().subscribe();
-	}
-
-	public connectToPeer(): Observable<void> {
-		return new Observable((observer) => {
-			const defaultNetworks = {
-				mainnet: {
-					ip: "wallets.ark.io",
-					port: "443",
-					protocol: "https",
-				},
-				devnet: {
-					ip: "dwallets.ark.io",
-					port: "443",
-					protocol: "https",
-				},
-			};
-
-			const isKnowNetwork = lodash.includes(
-				Object.keys(defaultNetworks),
-				this._network.name,
-			);
-
-			if (isKnowNetwork) {
-				this.updateNetwork(defaultNetworks[this._network.name]);
-				observer.next();
-				observer.complete();
-				return;
-			}
-
-			this.connectToRandomPeer().subscribe(observer);
-		});
 	}
 
 	public connectToRandomPeer(): Observable<void> {
@@ -315,7 +281,7 @@ export class ArkApiProvider {
 			const epochTime = moment(this._network.epoch).utc().valueOf();
 			const now = moment().valueOf();
 
-			const keys = ArkCrypto.Identities.Keys.fromPassphrase(key);
+			const keys = SolarCrypto.Identities.Keys.fromPassphrase(key);
 
 			transaction.timestamp = Math.floor((now - epochTime) / 1000);
 			transaction.senderPublicKey = keys.publicKey;
@@ -323,36 +289,38 @@ export class ArkApiProvider {
 			transaction.id = null;
 			transaction.senderId = transaction.address;
 
-			const data: ArkCrypto.Interfaces.ITransactionData = {
+			const data: SolarCrypto.Interfaces.ITransactionData = {
 				network: this._network.version,
 				type:
-					ArkCrypto.Enums.TransactionType[
-						ArkCrypto.Enums.TransactionType[transaction.type]
+					SolarCrypto.Enums.TransactionType[
+						SolarCrypto.Enums.TransactionType[transaction.type]
 					],
 				senderPublicKey: transaction.senderPublicKey,
 				timestamp: transaction.timestamp,
-				amount: new ArkCrypto.Utils.BigNumber(transaction.amount),
-				fee: new ArkCrypto.Utils.BigNumber(transaction.fee),
+				amount: new SolarCrypto.Utils.BigNumber(transaction.amount),
+				fee: new SolarCrypto.Utils.BigNumber(transaction.fee),
 				vendorField: transaction.vendorField,
 				recipientId: transaction.recipientId,
-				asset: transaction.asset,
+				nonce: new SolarCrypto.Utils.BigNumber(transaction.nonce),
+				version: transaction.version
+				/*asset: transaction.asset,*/
 			};
 
 			this.getNextWalletNonce(wallet.address)
 				.pipe(
 					tap((nonce) => {
-						if (this._network.aip11) {
+						{
 							transaction.nonce = nonce;
 							transaction.typeGroup = 1;
 							data.typeGroup = 1;
 							// @ts-ignore
 							data.nonce = nonce;
 							data.typeGroup = 1;
-							data.version = 2;
+							data.version = 3;
 						}
 					}),
 					finalize(() => {
-						data.signature = ArkCrypto.Transactions.Signer.sign(
+						data.signature = SolarCrypto.Transactions.Signer.sign(
 							data,
 							keys,
 						);
@@ -360,16 +328,16 @@ export class ArkApiProvider {
 						secondPassphrase = secondKey || secondPassphrase;
 
 						if (secondPassphrase) {
-							const secondKeys = ArkCrypto.Identities.Keys.fromPassphrase(
+							const secondKeys = SolarCrypto.Identities.Keys.fromPassphrase(
 								secondPassphrase,
 							);
-							data.secondSignature = ArkCrypto.Transactions.Signer.secondSign(
+							data.secondSignature = SolarCrypto.Transactions.Signer.secondSign(
 								data,
 								secondKeys,
 							);
 						}
 
-						transaction.id = ArkCrypto.Transactions.Utils.getId(
+						transaction.id = SolarCrypto.Transactions.Utils.getId(
 							data,
 						);
 						transaction.signature = data.signature;
@@ -385,7 +353,7 @@ export class ArkApiProvider {
 	}
 
 	public validateAddress(address: string) {
-		return ArkCrypto.Identities.Address.validate(
+		return SolarCrypto.Identities.Address.validate(
 			address,
 			parseInt(this._network.version.toString()),
 		);
@@ -528,7 +496,6 @@ export class ArkApiProvider {
 		this._client = new ArkClient(
 			this._network.getPeerAPIUrl(),
 			this.httpClient,
-			this.loggerService,
 		);
 
 		this.fetchDelegates(this._network.activeDelegates * 2).subscribe(
@@ -554,8 +521,8 @@ export class ArkApiProvider {
 				this._client
 					.getNodeCrypto(this._network.getPeerAPIUrl())
 					.subscribe((crypto: any) => {
-						ArkCrypto.Managers.configManager.setConfig(crypto);
-						ArkCrypto.Managers.configManager.setHeight(
+						SolarCrypto.Managers.configManager.setConfig(crypto);
+						SolarCrypto.Managers.configManager.setHeight(
 							config.height,
 						);
 					});

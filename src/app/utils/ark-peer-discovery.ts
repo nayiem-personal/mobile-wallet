@@ -1,10 +1,10 @@
+import { HttpClient } from "@angular/common/http";
 import isUrl from "is-url";
 import orderBy from "lodash/orderBy";
 import { Observable } from "rxjs/Observable";
 import semver from "semver";
 
-import { PeerApiResponse } from "@/utils/ark-client";
-import { HttpClient } from "@/utils/ark-http-client";
+import { PeerApiResponse } from "./ark-client";
 
 export class PeerDiscovery {
 	private version: string | undefined;
@@ -20,7 +20,7 @@ export class PeerDiscovery {
 
 	public find({
 		networkOrHost,
-		defaultPort = 4003,
+		defaultPort = 6003,
 	}: {
 		networkOrHost: string;
 		defaultPort?: number;
@@ -99,11 +99,15 @@ export class PeerDiscovery {
 				];
 
 				this.httpClient
-					.get(`http://${seed.ip}:${seed.port}/api/peers`, {
-						headers: {
-							"API-Version": "2",
+					.request(
+						"GET",
+						`http://${seed.ip}:${seed.port}/api/peers`,
+						{
+							headers: {
+								"API-Version": "2",
+							},
 						},
-					})
+					)
 					.subscribe(
 						(body: any) => {
 							let peers = body.data;

@@ -340,6 +340,7 @@ export class WalletDashboardPage implements OnInit, OnDestroy {
 
 	setWallet(wallet: Wallet) {
 		this.wallet = wallet;
+		console.log(this.wallet)
 		const transactions = this.wallet.transactions.map((transaction) => ({
 			id: transaction.id,
 			timestamp: transaction.timestamp,
@@ -363,6 +364,7 @@ export class WalletDashboardPage implements OnInit, OnDestroy {
 				this.marketCurrency,
 				this.marketHistory,
 			),
+			
 		}));
 
 		// if (dequal(transactions, this.transactions)) {

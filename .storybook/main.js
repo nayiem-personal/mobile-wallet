@@ -1,6 +1,6 @@
 module.exports = {
 	stories: ["../src/**/*.stories.[tj]s"],
-	webpackFinal: config => {
+	webpackFinal: (config) => {
 		config.module.rules.push({
 			test: /\.(scss|pcss)$/,
 			loader: "postcss-loader",

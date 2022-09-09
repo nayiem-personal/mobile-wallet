@@ -1,0 +1,97 @@
+{
+  "_args": [
+    [
+      "ark-ts@0.4.1",
+      "/home/x99/Workspace/solar-new/mobile-wallet"
+    ]
+  ],
+  "_from": "ark-ts@0.4.1",
+  "_id": "ark-ts@0.4.1",
+  "_inBundle": false,
+  "_integrity": "sha512-cNaVwxucv6bGzXKx8GEGdv6KFIzS7HZH2kNsLVbb/z69w/KUpqkjF0WuZRVoEsmFg4OXaWFaVlqOMYcObc+2pA==",
+  "_location": "/ark-ts",
+  "_phantomChildren": {
+    "reflect-metadata": "0.1.13",
+    "symbol-observable": "1.0.1"
+  },
+  "_requested": {
+    "type": "version",
+    "registry": true,
+    "raw": "ark-ts@0.4.1",
+    "name": "ark-ts",
+    "escapedName": "ark-ts",
+    "rawSpec": "0.4.1",
+    "saveSpec": null,
+    "fetchSpec": "0.4.1"
+  },
+  "_requiredBy": [
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/ark-ts/-/ark-ts-0.4.1.tgz",
+  "_spec": "0.4.1",
+  "_where": "/home/x99/Workspace/solar-new/mobile-wallet",
+  "author": {
+    "name": "Lúcio Rubens",
+    "email": "lucio@ark.io"
+  },
+  "bugs": {
+    "url": "https://github.com/ArkEcosystem/ark-ts/issues"
+  },
+  "dependencies": {
+    "@types/bigi": "^1.4.0",
+    "@types/node": "^8.0.12",
+    "@types/request": "^2.0.0",
+    "@types/rx": "^4.1.1",
+    "axios": "^0.18.0",
+    "bigi": "^1.4.2",
+    "bs58check": "^2.0.2",
+    "bytebuffer": "^5.0.1",
+    "create-hash": "^1.1.3",
+    "create-hmac": "^1.1.6",
+    "ecurve": "^1.0.5",
+    "json-typescript-mapper": "^1.1.3",
+    "randombytes": "^2.0.5",
+    "rxjs": "^5.5.12",
+    "secp256k1": "^3.3.0",
+    "wif": "^2.0.6"
+  },
+  "description": "An ARK API wrapper, written in TypeScript to interact with ARK blockchain.",
+  "devDependencies": {
+    "@types/chai": "^4.0.1",
+    "@types/mocha": "^2.2.41",
+    "chai": "^4.1.0",
+    "mocha": "^3.4.2",
+    "shx": "^0.2.2",
+    "source-map-support": "^0.4.15",
+    "ts-node": "^3.3.0",
+    "tslint": "^5.6.0",
+    "typedoc": "^0.8.0",
+    "typedoc-plugin-external-module-map": "^0.0.6",
+    "typescript": "^2.4.1"
+  },
+  "homepage": "https://github.com/ArkEcosystem/ark-ts#readme",
+  "keywords": [
+    "ark",
+    "api",
+    "blockchain",
+    "cryptocurrency",
+    "typescript"
+  ],
+  "license": "MIT",
+  "main": "index.js",
+  "name": "ark-ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arkecosystem/ark-ts.git"
+  },
+  "scripts": {
+    "build:docs": "typedoc --options typedoc.json src/index.ts",
+    "build:prod": "npm run build:ts && npm run build:docs && npm run copypackage",
+    "build:ts": "shx rm -r lib && tsc -p ./ && touch lib/.gitkeep",
+    "copypackage": "shx cp package.json ./lib/package.json",
+    "lint": "tslint src/**/*.ts",
+    "test": "mocha --opts .mocharc"
+  },
+  "types": "index.d.ts",
+  "version": "0.4.1"
+}
